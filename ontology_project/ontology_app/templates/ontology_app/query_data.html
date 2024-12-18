@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ontology Data</title>
+</head>
+<body>
+    <h1>Ontology Data</h1>
+    {% if data %}
+    <ul>
+        {% for entry in data %}
+        <li>
+            <strong>Subject:</strong> {{ entry.Subject }}<br>
+            <strong>Code:</strong> {{ entry.Code }}<br>
+            <strong>Teachers:</strong> {{ entry.Teachers|join:", " }}<br>
+            <strong>Students:</strong> {{ entry.Students|join:", " }}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No data available.</p>
+    {% endif %}
+</body>
+</html> 

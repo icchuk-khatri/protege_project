@@ -1,0 +1,152 @@
+{% extends 'ontology_app/index.html' %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Student Dashboard</h1>
+
+    <h3>Choose a Topic:</h3>
+    <select id="topicSelect" class="form-control">
+        <option value="" disabled selected>Select a topic</option>
+        {% for topic in topics %}
+        <option value="{{ topic }}">{{ topic }}</option>
+        {% endfor %}
+    </select>
+
+    <div id="formulaSection" style="display:none;">
+        <h3>Choose a Formula:</h3>
+        <select id="formulaSelect" class="form-control">
+            <option value="" disabled selected>Select a formula</option>
+        </select>
+
+        <div id="variablesSection" style="display:none;">
+            <h3>Input Variables:</h3>
+            <form id="variableForm" method="POST">
+                {% csrf_token %}
+                <div id="variableInputs"></div>
+                <button type="submit" class="btn btn-primary">Calculate</button>
+            </form>
+        </div>
+
+        <div id="resultSection" style="display:none;">
+            <h3>Result:</h3>
+            <div id="resultOutput"></div>
+            <h3>Input Details:</h3>
+            <div id="inputDetails"></div>
+            <h3>Graph:</h3>
+            <img id="resultGraph" src="" alt="Graph Visualization">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const topicSelect = document.getElementById("topicSelect");
+        const formulaSelect = document.getElementById("formulaSelect");
+        const variablesSection = document.getElementById("variablesSection");
+        const variableInputs = document.getElementById("variableInputs");
+        const resultSection = document.getElementById("resultSection");
+        const resultOutput = document.getElementById("resultOutput");
+        const resultGraph = document.getElementById("resultGraph");
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+        // Fetch formulas when a topic is selected
+        topicSelect.addEventListener("change", async () => {
+            const topic = topicSelect.value;
+            formulaSelect.innerHTML = "<option disabled selected>Loading...</option>";
+            variablesSection.style.display = "none";
+            resultSection.style.display = "none";
+
+            try {
+                const response = await fetch(`/get_formulas/?topic=${topic}`);
+                const data = await response.json();
+
+                formulaSelect.innerHTML = '<option value="" disabled selected>Select a formula</option>';
+                data.formulas.forEach((formula) => {
+                    const option = document.createElement("option");
+                    option.value = formula.name;
+                    option.textContent = `${formula.name} (${formula.expression})`;
+                    formulaSelect.appendChild(option);
+                });
+
+                document.getElementById("formulaSection").style.display = "block";
+            } catch (error) {
+                console.error("Error fetching formulas:", error);
+            }
+        });
+
+        // Display variable inputs when a formula is selected
+        formulaSelect.addEventListener("change", async () => {
+            const formula = formulaSelect.value;
+            variablesSection.style.display = "none";
+
+            try {
+                const response = await fetch(`/get_variables/?formula=${formula}`);
+                const data = await response.json();
+
+                variableInputs.innerHTML = "";
+                data.variables.forEach((variable) => {
+                    const input = document.createElement("input");
+                    input.type = "number";
+                    input.name = variable;
+                    input.placeholder = `Enter value for ${variable}`;
+                    input.classList.add("form-control");
+                    variableInputs.appendChild(input);
+                });
+
+                variablesSection.style.display = "block";
+            } catch (error) {
+                console.error("Error fetching variables:", error);
+            }
+        });
+
+        // Submit variables and calculate result
+        document.getElementById("variableForm").onsubmit = async (e) => {
+            e.preventDefault();
+        
+            const formData = new FormData(e.target);
+            const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+            const variables = {};
+        
+            for (const [key, value] of formData.entries()) {
+                if (key !== "csrfmiddlewaretoken") { // Exclude CSRF token from variables
+                    variables[key] = parseFloat(value);
+                }
+            }
+        
+            try {
+                const response = await fetch(`/calculate_formula/`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken,
+                    },
+                    body: JSON.stringify({
+                        formula_name: formulaSelect.value,
+                        variables: variables,
+                    }),
+                });
+        
+                const data = await response.json();
+        
+                // Display the result and graph
+                resultOutput.textContent = `Calculated Area: ${data.result}`;
+        
+                // Display input variables
+                const inputDetails = document.getElementById("inputDetails");
+                inputDetails.innerHTML = `<p><strong>Inputs:</strong> ${JSON.stringify(variables)}</p>`;
+        
+                // Display graph
+                resultGraph.src = `data:image/png;base64,${data.graph}`;
+                resultSection.style.display = "block";
+            } catch (error) {
+                console.error("Error calculating formula:", error);
+            }
+        };
+        
+    });
+</script>
+{% endblock %}

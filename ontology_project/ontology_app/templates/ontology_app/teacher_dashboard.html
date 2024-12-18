@@ -1,0 +1,44 @@
+{% extends 'ontology_app/index.html' %}
+
+{% block title %}Teacher Dashboard{% endblock %}
+
+{% block content %}
+<h1>Teacher Dashboard</h1>
+
+<form method="POST" id="topicForm">
+    {% csrf_token %}
+    <label><input type="checkbox" name="topics" value="Shape"> Shapes</label><br>
+    <label><input type="checkbox" name="topics" value="Formula"> Formulas</label><br>
+    <button type="submit">Load Topics</button>
+</form>
+
+<div id="results"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("topicForm");
+        form.onsubmit = async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+
+            try {
+                const response = await fetch("", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                // Displaying results
+                const resultsDiv = document.getElementById("results");
+                resultsDiv.innerHTML = `<h3>Results:</h3><pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+            } catch (error) {
+                console.error("Error fetching topics:", error);
+            }
+        };
+    });
+</script>
+{% endblock %}
